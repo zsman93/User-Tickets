@@ -1,0 +1,204 @@
+import time
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.chrome.options import Options as chromeoptions
+from getpass import getpass
+
+path = "C:\Program Files (x86)\chromedriver.exe"
+options = chromeoptions()
+options.add_argument("--headless=new")
+options.add_argument("--window-size=1920,1080")
+options.add_argument("--disable-gpu")
+options.add_argument("--disable-extensions")
+options.add_argument("--proxy-server='direct://'")
+options.add_argument("--proxy-bypass-list=*")
+options.add_argument("--start-maximized")
+options.add_argument("log-level=3")
+
+# Set the URL
+url = 'www.servicenow.com'  # Replace with your target URL
+
+# Login credentials
+username = input("Enter E-mail: ")
+password = getpass("Enter Password: ")
+
+# Go to login page
+driver = webdriver.Chrome(options=options)
+driver.get(url)
+
+# Locate the login elements
+username_elem = (By.ID, "i0116")
+password_elem = (By.ID, 'i0118')
+enter_button = (By.ID, "idSIButton9")
+
+
+# wait for email field and enter email
+WebDriverWait(driver, 30).until(EC.element_to_be_clickable(username_elem)).send_keys(username)
+WebDriverWait(driver, 30).until(EC.element_to_be_clickable(enter_button)).click()
+WebDriverWait(driver, 30).until(EC.element_to_be_clickable(password_elem)).send_keys(password)
+WebDriverWait(driver, 30).until(EC.element_to_be_clickable(enter_button)).click()
+time.sleep(10)
+
+# Check if MFA is needed
+try:
+    securelogin = driver.find_element(By.XPATH, "/html[1]/body[1]/div[1]/form[1]/div[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]/div[2]/div[2]/div[1]/div[2]/div[1]/div[3]/div[1]/div[1]/div[1]")
+    value = securelogin.text
+    print("Enter code in MFA app to allow login")
+    print(value)
+except NoSuchElementException:
+    print("No MFA Needed")
+WebDriverWait(driver, 30).until(EC.element_to_be_clickable(enter_button)).click()
+time.sleep(5)
+
+time.sleep(5)
+
+shadow_root = driver.find_element(By.XPATH, "/html/body/macroponent-f51912f4c700201072b211d4d8c26010").shadow_root
+iframe = shadow_root.find_element(By.ID, "gsft_main")
+driver.switch_to.frame(iframe)
+
+try:
+    ver = driver.find_element(By.CSS_SELECTOR, ".linked.formlink")
+    WebDriverWait(driver, 30).until(EC.element_to_be_clickable(ver))
+    print("Logged In Successfully")
+    print()
+except NoSuchElementException:
+        print("Login Failed or No tickets")
+
+time.sleep(15)
+
+# Below is loop that gets adid and sends email
+
+value = []
+try:
+    row_index = 1
+    scata_index = 0
+    while True:
+        try:
+            links = driver.find_elements(By.CSS_SELECTOR, ".linked.formlink")
+            if len(links) > scata_index:
+                links[scata_index].click()
+
+            time.sleep(2)
+
+            main_window = driver.current_window_handle #c91f411a-3c58-477d-bf4a-22ce788fae74 main           
+
+            adid = driver.find_element(By.XPATH, "/html/body/div[2]/form/span[1]/span/div[5]/div[2]/div/div[6]/table/tbody/tr[2]/td/div[2]/div/table/tbody/tr[3]/td/span/div[2]/div[2]/table/tbody/tr[1]/td/div/div/div/div[2]/input[2]")
+            data = adid.get_attribute("value")
+            value.append(data)
+
+            emailad = driver.find_element(By.XPATH, "/html/body/div[2]/form/span[1]/span/div[5]/div[2]/div/div[6]/table/tbody/tr[2]/td/div[2]/div/table/tbody/tr[3]/td/span/div[2]/div[1]/table/tbody/tr[2]/td/div/div/div/div[2]/input[2]")
+            emaildata = emailad.get_attribute("value")
+            realemail = driver.find_element(By.XPATH, "/html[1]/body[1]/div[2]/form[1]/span[1]/span[1]/div[5]/div[2]/div[1]/div[6]/table[1]/tbody[1]/tr[2]/td[1]/div[2]/div[1]/table[1]/tbody[1]/tr[3]/td[1]/span[1]/div[2]/div[1]/table[1]/tbody[1]/tr[1]/td[1]/div[1]/div[1]/div[1]/div[2]/div[1]/input[1]")
+            realemaildata = realemail.get_attribute("value")
+            realemailvalidated = emaildata.lower().split("@")[0] + "@testemail.co.uk"
+
+            useremail = emaildata.split('@')[0].split('.')[0]
+
+            emailcontent = f"""Hi {useremail},
+            Email body that is sent to user.
+            """
+         
+
+            reqitem = driver.find_element(By.XPATH, "/html/body/div[2]/form/span[1]/span/div[5]/div[1]/div[1]/div[2]/div[2]/div[2]/input")
+            reqitemdata = reqitem.get_attribute("value")
+
+            email = driver.find_element(By.XPATH, "/html/body/div[1]/span/span/nav/div/div[2]/span[1]/span[2]/span/button[3]")
+            email.click()
+
+            all_windows = driver.window_handles
+            popup_window = None
+            for window in all_windows:
+                if window != main_window:
+                    popup_window = window
+                    break
+
+            if popup_window:
+                driver.switch_to.window(popup_window)
+
+            time.sleep(5)
+    
+            toemail = driver.find_element(By.XPATH,"/html/body/div[2]/form/div[2]/div/div/span[2]/input[1]")
+            toemail.send_keys(realemailvalidated)
+            toemail.send_keys(Keys.RETURN)
+            ccemail = driver.find_element(By.XPATH, "/html/body/div[2]/form/div[3]/div/span/span[1]/span")
+            ccemail.click()
+            ccemail.send_keys(Keys.DELETE)
+            time.sleep(2)
+            ccemail2 = driver.find_element(By.XPATH, "/html/body/div[2]/form/div[3]/div/span/span[2]/input[1]")
+            ccemail2.send_keys(username)
+
+            subject = driver.find_element(By.XPATH, "/html[1]/body[1]/div[2]/form[1]/div[6]/div[1]/input[1]")
+            subject.click()
+            subject.send_keys(Keys.CONTROL + "a")
+            subject.send_keys(Keys.DELETE)
+            subject.send_keys(reqitemdata + " Access to Cloud - " + realemaildata)
+
+
+            driver.switch_to.frame('message.text_ifr')
+
+            emailtext = driver.find_element(By.XPATH, "/html[1]/body[1]")
+            emailtext.click()
+            time.sleep(2)
+            emailtext.send_keys(emailcontent)
+            time.sleep(3)
+
+            
+            driver.switch_to.window(popup_window)
+
+            sendemail = driver.find_element(By.ID, "send_button") 
+            sendemail.click()
+           # driver.close() # Enable this to test without sending emails comment the above sendemail out as well.
+
+            
+            time.sleep(3)
+    
+            driver.switch_to.window(main_window)
+            driver.switch_to.frame(iframe)
+            
+            back = driver.find_element(By.XPATH, "/html/body/div[1]/span/span/nav/div/div[1]/button[1]")
+            back.click()
+
+
+            time.sleep(3)
+
+            des1 = f"/html[1]/body[1]/div[1]/div[1]/span[1]/div[1]/div[7]/div[1]/table[1]/tbody[1]/tr[{row_index}]/td[7]"
+            
+            des = driver.find_element(By.XPATH, (des1))
+            des.click()
+            time.sleep(1)
+            des.send_keys(Keys.RETURN)
+            time.sleep(3)
+            desbox = driver.find_element(By.ID, "cell_edit_value")
+            desbox.send_keys(Keys.BACK_SPACE)
+            desbox.send_keys(data)
+            time.sleep(2)
+            desbox.send_keys(Keys.RETURN)
+            time.sleep(2)
+            print(data)
+            
+            
+
+            row_index += 1
+            scata_index += 1
+        except NoSuchElementException:
+            break
+finally:
+    driver.quit()
+
+# Scraped data
+print()
+print("Below are the ADID values that can be copied and pasted into the powershell script")
+print()
+print(*value, sep = ",")
+print()
+while True:
+    exit = input("Type exit and press enter to quit script: ")
+    if exit.lower() == "exit":
+        print("Exiting the script...")
+        break
+    else:
+        print("Please type exit and press enter to close script")
