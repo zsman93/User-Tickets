@@ -1,2 +1,2 @@
 # User-Tickets
-Goes through ServiceNow and sets ups users.
+Goes through ServiceNow and sets up users.
